@@ -1,10 +1,6 @@
 export default async function handler(req, res) {
-  const { headline, body, category, imageDesc } = req.method === 'POST' ? req.body : req.query;
+  const { headline, body, category } = req.body || req.query;
   const API_KEY = process.env.GROK_API_KEY;
-
-  if (!API_KEY) {
-    return res.status(500).json({ error: 'API key not configured' });
-  }
 
   try {
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -14,8 +10,8 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: "grok-beta",
-        messages: [{ role: "user", content: `Analyze X ad:
+        model: "grok-2-1212", // Updated model name
+        messages: [{ role: "user", content: `Analyze X ad for compliance.
 
 Headline: ${headline || 'None'}
 Body: ${body || 'None'}
