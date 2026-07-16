@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   const API_KEY = process.env.GROK_API_KEY;
 
   if (!API_KEY) {
-    return res.status(500).json({ error: 'API key not set' });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   try {
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "grok-4.5",
-        messages: [{ role: "user", content: `Analyze this X ad for compliance.
+        messages: [{ role: "user", content: `Analyze this X ad:
 
 Headline: ${headline}
 Body: ${body}
