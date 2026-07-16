@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>XAdCheck Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-white p-10">
+  <h1 class="text-4xl font-bold mb-8">XAdCheck Test</h1>
+  <button onclick="testAPI()" class="bg-amber-400 text-black px-8 py-4 rounded-3xl font-semibold">Test API</button>
+  <div id="result" class="mt-8 p-6 bg-zinc-900 rounded-3xl"></div>
+
+<script>
+async function testAPI() {
+  const result = document.getElementById('result');
+  result.innerHTML = 'Testing...';
+  try {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer <insert key>'
+      },
+      body: JSON.stringify({
+        model: "grok-2",
+        messages: [{ role: "user", content: "Test" }]
+      })
+    });
+    const data = await response.json();
+    result.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+  } catch (e) {
+    result.innerHTML = 'Error: ' + e.message;
+  }
+}
+</script>
+</body>
+</html>
