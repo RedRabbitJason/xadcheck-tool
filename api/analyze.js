@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "grok-4.5",
-        messages: [{ role: "user", content: `Analyze this X ad:
+        messages: [{ role: "user", content: `Analyze this X ad for compliance with X Advertising Policies.
 
 Headline: ${headline}
 Body: ${body}
