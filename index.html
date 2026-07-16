@@ -18,10 +18,10 @@ async function testAPI() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer <insert key>'
+        'Authorization': 'Bearer <insert key here>'
       },
       body: JSON.stringify({
-        model: "grok-2",
+        model: "grok-2", 
         messages: [{ role: "user", content: "Test" }]
       })
     });
