@@ -1,14 +1,21 @@
-export default async function handler(req, res) {
-  const { userId, action } = req.body;
+import { kv } from '@vercel/kv';
 
-  if (!userId) return res.status(400).json({ error: "No userId" });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { userId, action } = req.body || {};
+
+  if (!userId) {
+    return res.status(400).json({ error: "No userId provided" });
+  }
 
   try {
-    const kv = await import('@vercel/kv');
     let usage = await kv.get(`user:${userId}`) || { checksUsed: 0, bonusClaimed: false };
 
     if (action === "use-check") {
-      usage.checksUsed += 1;
+      usage.checksUsed = (usage.checksUsed || 0) + 1;
     } else if (action === "claim-bonus") {
       usage.bonusClaimed = true;
     }
@@ -16,7 +23,7 @@ export default async function handler(req, res) {
     await kv.set(`user:${userId}`, usage);
 
     res.status(200).json(usage);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 }
