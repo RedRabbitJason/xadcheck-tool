@@ -1,48 +1,75 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://dyclineceextfoyttyne.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5Y2xpbmVjZWV4dGZveXR0eW5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3ODA2NTUsImV4cCI6MjEwMDM1NjY1NX0.tN1MZVdnqxBJZ3ldxeayKGiPiOTNJsvivFwhqRUPztU'
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
 );
 
 export default async function handler(req, res) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { userId, action } = req.body || {};
 
-  if (!userId) {
-    return res.status(400).json({ error: "No userId provided" });
+  if (!userId || !action) {
+    return res.status(400).json({ error: 'userId and action are required' });
   }
 
   try {
-    // Get current usage
-    let { data: usage } = await supabase
+    // Get current record
+    let { data: existing } = await supabase
       .from('user_usage')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (!usage) {
-      usage = { user_id: userId, checks_used: 0, bonus_claimed: false };
+    if (!existing) {
+      // Create new record
+      const { error: insertError } = await supabase
+        .from('user_usage')
+        .insert([{
+          user_id: userId,
+          checks_used: action === 'use-check' ? 1 : 0,
+          bonus_claimed: action === 'claim-bonus'
+        }]);
+
+      if (insertError) {
+        return res.status(500).json({ error: insertError.message });
+      }
+    } else {
+      // Update existing record
+      const updates = {};
+
+      if (action === 'use-check') {
+        updates.checks_used = (existing.checks_used || 0) + 1;
+      }
+
+      if (action === 'claim-bonus') {
+        updates.bonus_claimed = true;
+      }
+
+      const { error: updateError } = await supabase
+        .from('user_usage')
+        .update(updates)
+        .eq('user_id', userId);
+
+      if (updateError) {
+        return res.status(500).json({ error: updateError.message });
+      }
     }
 
-    if (action === "use-check") {
-      usage.checks_used = (usage.checks_used || 0) + 1;
-    } else if (action === "claim-bonus") {
-      usage.bonus_claimed = true;
-    }
-
-    // Upsert
-    const { error } = await supabase
-      .from('user_usage')
-      .upsert(usage);
-
-    if (error) throw error;
-
-    res.status(200).json(usage);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 }
