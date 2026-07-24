@@ -14,12 +14,12 @@ export default async function handler(req, res) {
   const redirectUri = "https://xadcheck-tool.vercel.app/api/auth/callback";
 
   try {
-    // 1. Exchange code for access token
+    // Exchange code for token
     const tokenResponse = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+        Authorization: "Basic " + Buffer.from(clientId + ":" + clientSecret).toString("base64")
       },
       body: new URLSearchParams({
         code: code,
@@ -30,29 +30,30 @@ export default async function handler(req, res) {
     });
 
     const tokenData = await tokenResponse.json();
+    console.log("Token response:", tokenData);
 
     if (!tokenData.access_token) {
-      return res.status(400).send("Failed to get access token: " + JSON.stringify(tokenData));
+      return res.status(400).send("Failed to get access token:<br><pre>" + JSON.stringify(tokenData, null, 2) + "</pre>");
     }
 
-    // 2. Get user info
-    const userResponse = await fetch("https://api.twitter.com/2/users/me", {
+    // Get user info
+    const userResponse = await fetch("https://api.twitter.com/2/users/me?user.fields=id,name,username", {
       headers: {
-        Authorization: `Bearer ${tokenData.access_token}`
+        Authorization: "Bearer " + tokenData.access_token
       }
     });
 
     const userData = await userResponse.json();
-    const user = userData.data;
+    console.log("User response:", userData);
 
-    if (!user) {
-      return res.status(400).send("Failed to get user info");
+    if (!userData.data) {
+      return res.status(400).send("Failed to get user info:<br><pre>" + JSON.stringify(userData, null, 2) + "</pre>");
     }
 
-    // 3. Redirect back to the app with the username
-    // We pass the username in the URL so the frontend can pick it up
-    const redirectUrl = `https://www.brandingdepartment.com/test-page-new1?x_user=${encodeURIComponent(user.username)}&x_id=${user.id}`;
+    const user = userData.data;
 
+    // Success - redirect back to the app
+    const redirectUrl = "https://www.brandingdepartment.com/test-page-new1?x_user=" + encodeURIComponent(user.username) + "&x_id=" + user.id;
     res.redirect(302, redirectUrl);
 
   } catch (err) {
