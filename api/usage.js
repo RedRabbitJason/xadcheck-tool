@@ -8,7 +8,7 @@ const supabase = createClient(
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -36,17 +36,19 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: error.message });
     }
 
-    // If no record exists yet, return defaults
+    // If no record exists yet
     if (!data) {
       return res.status(200).json({
         checks_used: 0,
-        bonus_claimed: false
+        bonus_claimed: false,
+        credits_remaining: 0
       });
     }
 
     res.status(200).json({
       checks_used: data.checks_used || 0,
-      bonus_claimed: data.bonus_claimed || false
+      bonus_claimed: data.bonus_claimed || false,
+      credits_remaining: data.credits_remaining || 0
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
