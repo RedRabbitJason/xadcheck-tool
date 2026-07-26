@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
     // Success
     const user = userData.data;
-    const redirectUrl = "https://www.brandingdepartment.com/test-page-new1?x_user=" + encodeURIComponent(user.username) + "&x_id=" + user.id;
+    const redirectUrl = "https://xadcheck.com/?x_user=" + encodeURIComponent(user.username) + "&x_id=" + user.id;
     res.redirect(302, redirectUrl);
 
   } catch (err) {
