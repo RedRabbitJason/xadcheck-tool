@@ -35,36 +35,54 @@ export default async function handler(req, res) {
 
     if (!existing) {
       // Create new record
+      const newRecord = {
+        user_id: userId,
+        checks_used: action === 'use-check' ? 1 : 0,
+        bonus_claimed: action === 'claim-bonus',
+        credits_remaining: 0
+      };
+
       const { error: insertError } = await supabase
         .from('user_usage')
-        .insert([{
-          user_id: userId,
-          checks_used: action === 'use-check' ? 1 : 0,
-          bonus_claimed: action === 'claim-bonus'
-        }]);
+        .insert([newRecord]);
 
       if (insertError) {
         return res.status(500).json({ error: insertError.message });
       }
     } else {
-      // Update existing record
       const updates = {};
 
       if (action === 'use-check') {
-        updates.checks_used = (existing.checks_used || 0) + 1;
+        const freeAllowance = 1 + (existing.bonus_claimed ? 1 : 0);
+        const freeUsed = existing.checks_used || 0;
+
+        if (freeUsed < freeAllowance) {
+          // Still have free checks left → just increase checks_used
+          updates.checks_used = freeUsed + 1;
+        } else {
+          // Free checks exhausted → deduct from paid credits
+          const currentCredits = existing.credits_remaining || 0;
+          if (currentCredits > 0) {
+            updates.credits_remaining = currentCredits - 1;
+          }
+          // Still increase checks_used for history
+          updates.checks_used = freeUsed + 1;
+        }
       }
 
       if (action === 'claim-bonus') {
         updates.bonus_claimed = true;
       }
 
-      const { error: updateError } = await supabase
-        .from('user_usage')
-        .update(updates)
-        .eq('user_id', userId);
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('user_usage')
+          .update(updates)
+          .eq('user_id', userId);
 
-      if (updateError) {
-        return res.status(500).json({ error: updateError.message });
+        if (updateError) {
+          return res.status(500).json({ error: updateError.message });
+        }
       }
     }
 
