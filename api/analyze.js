@@ -68,7 +68,7 @@ Rules:
         'Authorization': `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: 'ggrok-4.5',
+        model: 'grok-4.5',
         messages: [
           {
             role: 'system',
