@@ -1,12 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -20,7 +12,6 @@ export default async function handler(req, res) {
   }
 
   const { headline = '', body = '', category = 'general', landing = '', imageDesc = '' } = req.body || {};
-
   const API_KEY = process.env.GROK_API_KEY;
 
   if (!API_KEY) {
@@ -50,32 +41,24 @@ Your response MUST follow this exact structure and use HTML for formatting:
    List any of the following common X Ads issues that apply to this creative. If none apply, write "None detected".
 
    Common pain points to check for:
-   - Links placed directly in the ad body text (high risk of limited delivery or rejection)
+   - Links placed directly in the ad body text
    - Multiple or repeated links / domain mentions
-   - Exaggerated or absolute claims (e.g. "guaranteed", "#1", "best", income promises)
-   - Before/after or sensational transformation claims
-   - Heavy text overlay in images (if image description suggests significant text)
-   - Implying official partnership with X or using X branding/logo language
-   - Sensitive category risks (finance, health, politics, crypto, alcohol, gambling, etc.)
-   - Vague, missing, or mismatched landing page
-   - Clickbait or fear-based tactics
+   - Exaggerated or absolute claims
+   - Before/after or sensational claims
+   - Heavy text in images
+   - Implying partnership with X
+   - Sensitive category risks
+   - Vague or missing landing page
 
-4. Then provide a detailed analysis covering:
-   - Prohibited content check
-   - Claim reasonableness
-   - Category fit
-   - Landing page & branding
-   - Other relevant policies
+4. Then provide a detailed analysis.
 
 5. End with a clear verdict sentence.
 
 Rules:
 - Be direct and practical.
-- Do not invent policy violations that are not present.
-- Prefer "CAUTION" over "NOT COMPLIANT" when the issue is delivery risk rather than a hard policy ban.
-- Never claim the ad is guaranteed to be approved.
-- Format the response in clean HTML (use <p>, <h3>, <ul>, <li>, <strong> as needed).
-- Do not wrap the entire response in markdown code blocks.`;
+- Do not invent violations.
+- Prefer CAUTION over NOT COMPLIANT when it is mainly a delivery risk.
+- Format in clean HTML. Do not wrap the response in markdown code blocks.`;
 
   try {
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -85,11 +68,11 @@ Rules:
         'Authorization': `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-2',
+        model: 'grok-2-latest',
         messages: [
           {
             role: 'system',
-            content: 'You are a precise and practical X Ads policy compliance expert. Output only the structured HTML analysis requested. No preamble.'
+            content: 'You are a precise X Ads policy compliance expert. Output only the structured HTML analysis. No preamble.'
           },
           {
             role: 'user',
@@ -102,12 +85,26 @@ Rules:
 
     const data = await response.json();
 
+    // Better error reporting
+    if (!response.ok) {
+      console.error('xAI API Error:', JSON.stringify(data, null, 2));
+      return res.status(500).json({ 
+        error: data.error?.message || data.error || 'Analysis failed',
+        details: data
+      });
+    }
+
     if (data.error) {
-      return res.status(500).json({ error: data.error.message || 'Analysis failed' });
+      console.error('xAI returned error:', data.error);
+      return res.status(500).json({ 
+        error: data.error.message || data.error,
+        details: data
+      });
     }
 
     res.status(200).json(data);
   } catch (error) {
+    console.error('Analyze exception:', error);
     res.status(500).json({ error: error.message });
   }
 }
