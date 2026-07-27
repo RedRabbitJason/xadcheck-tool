@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         user_id: userId,
         checks_used: action === 'use-check' ? 1 : 0,
         bonus_claimed: action === 'claim-bonus',
-        credits_remaining: 0
+        credits_remaining: action === 'claim-bonus' ? 1 : 0
       };
 
       const { error: insertError } = await supabase
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         const freeUsed = existing.checks_used || 0;
 
         if (freeUsed < freeAllowance) {
-          // Still have free checks left → just increase checks_used
+          // Still have free checks left
           updates.checks_used = freeUsed + 1;
         } else {
           // Free checks exhausted → deduct from paid credits
@@ -65,13 +65,16 @@ export default async function handler(req, res) {
           if (currentCredits > 0) {
             updates.credits_remaining = currentCredits - 1;
           }
-          // Still increase checks_used for history
           updates.checks_used = freeUsed + 1;
         }
       }
 
       if (action === 'claim-bonus') {
-        updates.bonus_claimed = true;
+        // Only allow once
+        if (!existing.bonus_claimed) {
+          updates.bonus_claimed = true;
+          updates.credits_remaining = (existing.credits_remaining || 0) + 1;
+        }
       }
 
       if (Object.keys(updates).length > 0) {
