@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   const redirectUri = "https://xadcheck-tool.vercel.app/api/auth/callback";
 
   try {
-    // Step 1: Get token
     const tokenRes = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
       headers: {
@@ -31,7 +30,6 @@ export default async function handler(req, res) {
 
     const tokenData = await tokenRes.json();
 
-    // If no access token, show the full response
     if (!tokenData.access_token) {
       return res.status(400).send(`
         <h2>Token exchange failed</h2>
@@ -39,7 +37,6 @@ export default async function handler(req, res) {
       `);
     }
 
-    // Step 2: Get user
     const userRes = await fetch("https://api.twitter.com/2/users/me?user.fields=id,name,username", {
       headers: {
         "Authorization": "Bearer " + tokenData.access_token
@@ -52,17 +49,12 @@ export default async function handler(req, res) {
       return res.status(400).send(`
         <h2>Failed to get user info</h2>
         <pre>${JSON.stringify(userData, null, 2)}</pre>
-        <hr>
-        <h3>Token data (for debugging)</h3>
-        <pre>${JSON.stringify(tokenData, null, 2)}</pre>
       `);
     }
 
-    // Success
     const user = userData.data;
-    const redirectUrl = "https://xadcheck.com/?x_user=" + encodeURIComponent(user.username) + "&x_id=" + user.id;
+    const redirectUrl = "https://www.adherence.tools/?x_user=" + encodeURIComponent(user.username) + "&x_id=" + user.id;
     res.redirect(302, redirectUrl);
-
   } catch (err) {
     res.status(500).send("Server error: " + err.message);
   }
