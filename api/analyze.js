@@ -12,13 +12,17 @@ export default async function handler(req, res) {
   }
 
   const { headline = '', body = '', category = 'general', landing = '', imageDesc = '' } = req.body || {};
+  const allowed = ['X', 'Instagram', 'Facebook', 'LinkedIn', 'TikTok', 'YouTube'];
+  const incoming = Array.isArray(req.body?.platforms) ? req.body.platforms : ['X'];
+  const platforms = incoming.filter((name) => allowed.includes(name));
+  const platformList = (platforms.length ? platforms : ['X']).join(', ');
   const API_KEY = process.env.GROK_API_KEY;
 
   if (!API_KEY) {
     return res.status(500).json({ error: 'API key not set' });
   }
 
-  const prompt = `You are an expert X (Twitter) Ads policy analyst. Analyze the following ad creative for compliance with current X Ads policies.
+  const prompt = `You are an expert paid-social ads policy analyst. Analyze the following ad creative for the selected platforms.
 
 Ad Details:
 - Headline: ${headline}
@@ -26,10 +30,11 @@ Ad Details:
 - Category: ${category}
 - Landing Page: ${landing || 'Not provided'}
 - Image Description: ${imageDesc || 'Not provided'}
+- Platforms: ${platformList}
 
 Your response MUST follow this exact structure and use HTML for formatting:
 
-1. Start with one of these status labels (exactly as written):
+1. Start with one of these status labels (exactly as written). Use the strictest result across the selected platforms:
    - COMPLIANT
    - CAUTION
    - NOT COMPLIANT
@@ -38,7 +43,7 @@ Your response MUST follow this exact structure and use HTML for formatting:
 
 3. Include a clearly labeled section:
    <h3>Detected Pain Points</h3>
-   List any of the following common X Ads issues that apply to this creative. If none apply, write "None detected".
+   List any of the following common paid-social issues that apply to this creative. If none apply, write "None detected".
 
    Common pain points to check for:
    - Links placed directly in the ad body text
@@ -46,13 +51,17 @@ Your response MUST follow this exact structure and use HTML for formatting:
    - Exaggerated or absolute claims
    - Before/after or sensational claims
    - Heavy text in images
-   - Implying partnership with X
+   - Implying partnership with the platform
    - Sensitive category risks
    - Vague or missing landing page
 
-4. Then provide a detailed analysis.
+4. If more than one platform is selected, include:
+   <h3>By Platform</h3>
+   One short line per selected platform. Name the platform, then Compliant, Caution, or Not Compliant, then the specific reason.
 
-5. End with a clear verdict sentence.
+5. Then provide a detailed analysis. Weight X Ads policy when X is selected. For any other selected platform, only flag issues that are real policy or delivery risks on that platform.
+
+6. End with a clear verdict sentence.
 
 Rules:
 - Be direct and practical.
@@ -72,7 +81,7 @@ Rules:
         messages: [
           {
             role: 'system',
-            content: 'You are a precise X Ads policy compliance expert. Output only the structured HTML analysis. No preamble.'
+            content: 'You are a precise paid-social ads policy expert. Output only the structured HTML analysis. No preamble.'
           },
           {
             role: 'user',
@@ -85,10 +94,9 @@ Rules:
 
     const data = await response.json();
 
-    // Better error reporting
     if (!response.ok) {
       console.error('xAI API Error:', JSON.stringify(data, null, 2));
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: data.error?.message || data.error || 'Analysis failed',
         details: data
       });
@@ -96,7 +104,7 @@ Rules:
 
     if (data.error) {
       console.error('xAI returned error:', data.error);
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: data.error.message || data.error,
         details: data
       });
